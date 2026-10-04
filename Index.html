@@ -1,1 +1,53 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GlowBet - Naija #1</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body class="bg-[#F5F7FB]"><header class="bg-[#0A1931] text-white p-3 flex justify-between items-center"><b class="text-[20px] tracking-widest">GlowBet</b><a href="/admin.html" class="bg-[#FFD60A] text-black px-3 py-1 rounded-full text-[10px] font-black">ADMIN</a></header><div id="matches" class="p-3 space-y-2 max-w-[600px] mx-auto"></div><script>const sb=supabase.createClient("https://mkdtwuiolobkfpczxmsk.supabase.co","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHR3dWlvbG9ia2ZwY3p4bXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDA3OTAsImV4cCI6MjEwNjE2Njc5MH0.pBA-CWKITyvk4AcZhnDM8LL_Zx_H9FwHvbXpBVRk4hs");async function load(){const{data}=await sb.from('matches').select('*').eq('visible',true).order('created_at',{ascending:false});document.getElementById('matches').innerHTML=(data||[]).map(m=>`<div class="bg-white p-3 rounded-xl border flex justify-between"><div><b>${m.home} vs ${m.away}</b><br><span class="text-[11px] text-gray-500">${m.league}</span></div><div class="flex gap-1"><span class="bg-[#0A1931] text-[#FFD60A] px-3 py-1 rounded-full text-[12px] font-bold">${m.odds_h}</span><span class="bg-gray-100 border px-3 py-1 rounded-full text-[12px] font-bold">${m.odds_d}</span><span class="bg-gray-100 border px-3 py-1 rounded-full text-[12px] font-bold">${m.odds_a}</span></div></div>`).join('')||'<p class="text-center p-10 text-gray-500">No matches yet. Go to ADMIN to add.</p>'}load();</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GlowBet - Best Odds in Nigeria</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{background:#0f1923;color:#fff}
+header{background:#1a2c38;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.logo{color:#00ff88;font-weight:900;font-size:26px;letter-spacing:1px}
+.betslip{background:#1a2c38;padding:15px;position:fixed;bottom:0;width:100%;max-width:420px;right:0;border-radius:12px 12px 0 0;box-shadow:0 -5px 20px rgba(0,0,0,0.5)}
+.match{background:#1a2c38;margin:10px 0;padding:15px;border-radius:10px;display:flex;justify-content:space-between;align-items:center}
+.odd{background:#2a3c48;padding:8px 14px;margin:0 3px;border-radius:6px;cursor:pointer;font-weight:bold;transition:0.2s}
+.odd:hover{background:#00ff88;color:#000}
+.container{max-width:900px;margin:auto;padding:15px;padding-bottom:180px}
+.btn{background:#00ff88;color:#000;border:none;padding:14px;width:100%;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:12px;font-size:16px}
+input{outline:none}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">GlowBet</div>
+<div><a href="/admin.html" style="color:#aaa;text-decoration:none;font-size:14px">Admin Panel</a></div>
+</header>
+
+<div class="container" id="matches">
+<h2 style="margin:15px 0">Loading matches...</h2>
+</div>
+
+<div class="betslip">
+<h3 style="margin-bottom:8px">Betslip (<span id="count">0</span>)</h3>
+<div id="slip" style="min-height:20px;color:#aaa;font-size:14px">No selections yet</div>
+<div style="margin-top:12px;display:flex;justify-content:space-between"><span>Total Odds:</span><b id="totalOdds">1.00</b></div>
+<input id="stake" type="number" placeholder="Stake ₦ 100, 500..." style="width:100%;padding:12px;margin-top:10px;border-radius:6px;border:none;background:#0f1923;color:#fff">
+<button class="btn" onclick="placeBet()">Place Bet - Win ₦<span id="win">0.00</span></button>
+</div>
+
+<script>
+const supabaseUrl = 'https://mkdtwuiolobkfpczxmsk.supabase.co'
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rZHR3dWlvbG9ia2ZwY3p4bXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDA3OTAsImV4cCI6MjEwNjYxNjc5MH0.pBA-CWKITyvk4AcZhnDM8LL_Zx_H9FwHvbXpBVRk4hs'
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey)
+
+let betslip = []
+
+async function loadMatches(){
+ const {data, error} = await supabaseClient.from('matches').select('*').order('created_at', {ascending:false})
+ const container = document.getElementById('matches')
+ if(error){ container.innerHTML = '<p>Error: '+error.message+'<br>Go to /admin.html to add matches</p>'; return }
+ if(!data || data.length==0){ container.innerHTML = '<h3 style="margin-top:30px;text-align:center">No matches yet.<br><br><a href="/admin.html" style="color:#00ff88">Go to Admin to add matches</a></h3>'; return }
+ container.innerHTML = '<h2 style="margin:15px 0">Today Matches</h2>' + data.map(m=>`
+   <div class="match">
